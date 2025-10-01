@@ -17,6 +17,13 @@ func main() {
 	// Load environment variables
 	godotenv.Load()
 
+	//init redis
+	err := infrastructure.InitRedisClient()
+	if err != nil {
+		log.Fatal("❌ Failed to connect to Redis:", err)
+	}
+	log.Println("✅ Redis connected successfully")
+
 	// Connect to PostgreSQL
 	dsn := os.Getenv("DB_DSN")
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
@@ -25,7 +32,7 @@ func main() {
 	}
 
 	// Auto-migrate schema (buat tabel jika belum ada)
-	err = db.AutoMigrate(&infrastructure.User{})
+	err = db.AutoMigrate(&infrastructure.User{}, &infrastructure.Product{})
 	if err != nil {
 		log.Fatal("❌ Failed to migrate database:", err)
 	}
@@ -38,6 +45,9 @@ func main() {
 	// Register user routes
 	userHandler := delivery.NewUserHandler(db)
 	userHandler.RegisterRoutes(e)
+	// Register product routes
+	productHandler := delivery.NewProductHandler(db)
+	productHandler.RegisterRoutes(e)
 
 	// Start server
 	port := os.Getenv("SERVER_PORT")
